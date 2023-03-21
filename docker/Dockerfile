@@ -37,7 +37,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> /etc/bash.bashrc
 RUN apt-get install -y curl grep sed dpkg && \
-    TINI_VERSION=`curl https://github.com/krallin/tini/releases/latest | grep -o "/v.*\"" | sed 's:^..\(.*\).$:\1:'` && \
+    TINI_VERSION=0.19.0 && \
     curl -L "https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini_${TINI_VERSION}.deb" > tini.deb && \
     dpkg -i tini.deb && \
     rm tini.deb && \
@@ -51,7 +51,7 @@ RUN conda update -y --name base conda \
 # NOTE: we don't use TF so might not need some of these
 # ========== Tensorflow dependencies ==========
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends --allow-unauthenticated \
         build-essential \
         cuda-command-line-tools-${CUDA/./-} \
         cuda-cublas-${CUDA/./-} \
@@ -134,10 +134,11 @@ RUN /tmp/install_mujoco.py --mujoco-path=/root/.mujoco --versions 1.31 1.50 2.00
 ENV LD_LIBRARY_PATH /root/.mujoco/mjpro150/bin:${LD_LIBRARY_PATH}
 ENV LD_LIBRARY_PATH /root/.mujoco/mujoco200/bin:${LD_LIBRARY_PATH}
 ENV LD_LIBRARY_PATH /root/.mujoco/mujoco200_linux/bin:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH /root/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
 
 # This is a hack required to make mujocopy to compile in gpu mode
-RUN mkdir -p /usr/lib/nvidia-000
-ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/lib/nvidia-000
+RUN mkdir -p /usr/lib/nvidia
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/lib/nvidia
 
 
 # ========== Conda Environment ==========
@@ -148,9 +149,9 @@ COPY ./environment.yml /tmp/environment.yml
 # To the container. We need the key in order to compile mujoco_py.
 # TODO this is not good but it can't find the key otherwise
 #RUN echo "${MJKEY}" > ./mjkey.txt 
-COPY ./mjkey.txt /root/.mujoco/
-RUN conda env update -f /tmp/environment.yml \
-    && conda clean --all -y 
+# COPY ./mjkey.txt /root/.mujoco/
+# RUN conda env update -f /tmp/environment.yml \
+#     && conda clean --all -y 
 
 RUN mkdir /root/code
 WORKDIR /root/code
